@@ -18,7 +18,6 @@ let cache = {
 
 // ── Helpers para limpiar datos del XML de RedSP v4 ──
 
-/** Devuelve el valor de texto de un nodo XML (soporta primitivos y objetos con #text) */
 const getVal = (obj) => {
     if (obj === undefined || obj === null) return '';
     if (typeof obj === 'object') {
@@ -29,21 +28,17 @@ const getVal = (obj) => {
     return String(obj).trim();
 };
 
-/** Convierte a booleano (1 / yes / true / si → true) */
 const getBool = (val) => {
     const s = getVal(val).toLowerCase();
     return s === '1' || s === 'yes' || s === 'true' || s === 'si';
 };
 
-/** Convierte a número (NaN → 0) */
 const getNum = (val) => {
     const n = parseFloat(getVal(val));
     return isNaN(n) ? 0 : n;
 };
 
 // ── Extracción de imágenes ──
-// En RedSP v4: <images><image id="1"><url>…</url></image>…</images>
-// fast-xml-parser con ignoreAttributes:false convierte cada <image> en { id, url } o { id, tags, url }
 function extractImages(p) {
     const imgs = [];
     if (!p.images || !p.images.image) return imgs;
@@ -52,10 +47,8 @@ function extractImages(p) {
 
     for (const img of rawImages) {
         if (typeof img === 'string') {
-            // caso simple: <image>URL</image>
             if (img.startsWith('http')) imgs.push(img);
         } else if (typeof img === 'object') {
-            // caso normal: <image id="1"><url>…</url></image>
             const url = getVal(img.url);
             if (url) imgs.push(url);
         }
@@ -68,23 +61,19 @@ function mapProperty(p) {
     const images = extractImages(p);
 
     return {
-        // Identificación
         id: getVal(p.id),
         ref: getVal(p.ref),
         development_ref: getVal(p.development_ref),
 
-        // Títulos (multi-idioma)
         title: getVal(p.title?.es || p.title?.en || p.title),
         title_en: getVal(p.title?.en),
         title_es: getVal(p.title?.es),
 
-        // Tipo y estado
         type: getVal(p.type),
         estado: getBool(p.new_build) ? 'Obra Nueva' : 'Resale',
         new_build: getBool(p.new_build),
         off_plan: getBool(p.off_plan),
 
-        // Ubicación – campos anidados en <address>
         provincia: getVal(p.address?.province),
         ciudad: getVal(p.address?.town),
         costa: getVal(p.costa),
@@ -94,17 +83,14 @@ function mapProperty(p) {
         location_detail_1: getVal(p.location_detail_1),
         location_detail_2: getVal(p.location_detail_2),
 
-        // Coordenadas
         latitude: getNum(p.location?.latitude),
         longitude: getNum(p.location?.longitude),
 
-        // Precio
         price: getNum(p.price),
         price_to: getNum(p.price_to),
         currency: getVal(p.currency),
         price_freq: getVal(p.price_freq),
 
-        // Habitaciones
         bedrooms: getNum(p.beds),
         bathrooms: getNum(p.baths),
         toilets: getNum(p.toilets_wc),
@@ -112,7 +98,6 @@ function mapProperty(p) {
         floor: getNum(p.floor),
         orientation: getVal(p.orientation),
 
-        // Superficies – anidado en <surface_area>
         built: getNum(p.surface_area?.built_m2),
         usable: getNum(p.surface_area?.usable_living_area_m2),
         plot: getNum(p.surface_area?.plot_m2),
@@ -121,23 +106,19 @@ function mapProperty(p) {
         garden_area: getNum(p.surface_area?.garden_m2),
         underground: getNum(p.surface_area?.underground_m2),
 
-        // Distancias – anidado en <distances>
         distanceBeach: getNum(p.distances?.distance_to_beach_m),
         distanceAirport: getNum(p.distances?.distance_airport_m),
         distanceGolf: getNum(p.distances?.distance_golf_m),
         distanceAmenities: getNum(p.distances?.distance_amenities_m),
 
-        // Piscinas – anidado en <pools>
         pool: getBool(p.pools?.pool),
         communal_pool: getBool(p.pools?.communal_pool),
         private_pool: getBool(p.pools?.private_pool),
 
-        // Parking – anidado en <parking>
         parking: getNum(p.parking?.number_of_parking_spaces) > 0,
         parkingSpaces: getNum(p.parking?.number_of_parking_spaces),
         garageSpaces: getNum(p.parking?.number_of_garage_spaces),
 
-        // Categoría – anidado en <category>
         category: {
             urban: getBool(p.category?.urban),
             beach: getBool(p.category?.beach),
@@ -148,7 +129,6 @@ function mapProperty(p) {
             featured: getBool(p.category?.featured),
         },
 
-        // Vistas – anidado en <views>
         views: {
             sea_views: getBool(p.views?.sea_views),
             village_views: getBool(p.views?.village_views),
@@ -158,7 +138,6 @@ function mapProperty(p) {
             mountain_views: getBool(p.views?.mountain_views),
         },
 
-        // Features – anidado en <features>
         features: {
             air_conditioning: getBool(p.features?.Air_Conditioning),
             appliances: getBool(p.features?.Appliances),
@@ -170,6 +149,126 @@ function mapProperty(p) {
             electric_blinds: getBool(p.features?.electric_blinds),
             furnished: getBool(p.features?.furnished),
             games_room: getBool(p.features?.games_room),
+            garden: getBool(p.features?.garden),
+            gated: getBool(p.features?.gated),
+            gym: getBool(p.features?.gym),
+            heating: getBool(p.features?.heating),
+            jacuzzi: getBool(p.features?.jacuzzi),
+            laundry_room: getBool(p.features?.laundry_room),
+            lift: getBool(p.features?.lift),
+            patio: getBool(p.features?.patio),
+            safe_box: getBool(p.features?.safe_box),
+            solarium: getBool(p.features?.solarium),
+            spa: getBool(p.features?.spa),
+            storage: getBool(p.features?.storage),
+            storage_room: getBool(p.features?.storage_room),
+            terrace: getBool(p.features?.terrace),
+            white_goods: getBool(p.features?.white_goods),
+        },
+
+        lift: getBool(p.features?.lift),
+        seaViews: getBool(p.views?.sea_views),
+        solarium: getBool(p.features?.solarium),
+        keyReady: getBool(p.key_ready),
+        showHome: getBool(p.show_house),
+        firstLine: getBool(p.category?.first_line),
+
+        energy_consumption: getVal(p.energy_rating?.consumption),
+        energy_emissions: getVal(p.energy_rating?.emissions),
+
+        delivery_date: getVal(p.delivery_date),
+        year_build: getVal(p.year_build),
+        date: getVal(p.date),
+
+        description: getVal(p.desc?.es || p.desc?.en || p.desc),
+        description_en: getVal(p.desc?.en),
+        description_es: getVal(p.desc?.es),
+
+        images: images,
+        image: images[0] || '',
+    };
+}
+
+// ── Actualización del caché ──
+async function updateCache() {
+    try {
+        console.log('Actualizando caché desde RedSP v4...');
+        const response = await axios.get(XML_URL, { timeout: 60000 });
+
+        const parser = new XMLParser({
+            ignoreAttributes: false,
+            attributeNamePrefix: '',
+            textNodeName: '#text',
+            parseTagValue: true,
+            trimValues: true,
+        });
+
+        const jsonObj = parser.parse(response.data);
+
+        // FIX: el nodo raíz del XML es <redsp>, no <root>
+        console.log('Nodo raíz XML:', Object.keys(jsonObj));
+        const propertiesRaw = jsonObj.redsp?.property
+            || jsonObj.root?.property
+            || jsonObj.property
+            || [];
+        const propertiesArray = Array.isArray(propertiesRaw) ? propertiesRaw : [propertiesRaw];
+
+        console.log('Propiedades encontradas:', propertiesArray.length);
+
+        const mapped = propertiesArray.map(mapProperty);
+
+        cache.data = mapped;
+        cache.lastUpdated = new Date();
+        console.log(`Caché actualizada: ${mapped.length} propiedades cargadas.`);
+    } catch (error) {
+        console.error('Error actualizando caché:', error.message);
+    }
+}
+
+// ── Rutas ──
+
+app.get('/api/properties', async (req, res) => {
+    if (!cache.data) await updateCache();
+    if (!cache.data) return res.status(503).json({ error: 'Datos no disponibles todavía' });
+
+    const filtros = {
+        provincias: [...new Set(cache.data.map(p => p.provincia))].filter(Boolean).sort(),
+        ciudades: [...new Set(cache.data.map(p => p.ciudad))].filter(Boolean).sort(),
+        costas: [...new Set(cache.data.map(p => p.costa))].filter(Boolean).sort(),
+        tipos: [...new Set(cache.data.map(p => p.type))].filter(Boolean).sort(),
+    };
+
+    res.json({
+        total: cache.data.length,
+        lastUpdated: cache.lastUpdated,
+        filtrosDisponibles: filtros,
+        properties: cache.data,
+    });
+});
+
+app.get('/api/properties/:ref', async (req, res) => {
+    if (!cache.data) await updateCache();
+    if (!cache.data) return res.status(503).json({ error: 'Datos no disponibles todavía' });
+
+    const prop = cache.data.find(p => p.ref === req.params.ref);
+    prop ? res.json(prop) : res.status(404).json({ error: 'Propiedad no encontrada' });
+});
+
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'OK',
+        count: cache.data?.length || 0,
+        lastUpdated: cache.lastUpdated,
+    });
+});
+
+app.listen(PORT, () => {
+    console.log(`Servidor en puerto ${PORT}`);
+    updateCache();
+});
+
+// Auto-refresh cada hora
+setInterval(updateCache, 3600000);            games_room: getBool(p.features?.games_room),
             garden: getBool(p.features?.garden),
             gated: getBool(p.features?.gated),
             gym: getBool(p.features?.gym),
