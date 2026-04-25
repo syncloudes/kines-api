@@ -12,11 +12,10 @@ app.use(compression());
 app.use(cors());
 
 let cache = {
-    data: [], // Inicializado como array vacío para evitar errores de iteración
+    data: [], 
     lastUpdated: null
 };
 
-// Helpers de limpieza
 const getVal = (obj) => {
     if (obj === undefined || obj === null) return '';
     if (typeof obj === 'object') {
@@ -81,10 +80,14 @@ function mapProperty(p) {
 async function updateCache() {
     try {
         console.log('Descargando XML...');
-        const response = await axios.get(XML_URL, { timeout: 30000 });
+        // Forzamos respuesta como texto plano para evitar líos de tipos
+        const response = await axios.get(XML_URL, { 
+            timeout: 30000,
+            responseType: 'text' 
+        });
         
-        // Limpiar posibles espacios antes del <?xml
-        const cleanData = response.data.trim();
+        // Limpieza absoluta de espacios y caracteres invisibles al inicio
+        const cleanData = response.data.replace(/^\s+|\s+$/g, '').replace(/^\ufeff/g, '');
 
         const parser = new XMLParser({
             ignoreAttributes: false,
@@ -101,29 +104,22 @@ async function updateCache() {
 
         cache.data = propertiesArray.map(mapProperty);
         cache.lastUpdated = new Date();
-        console.log(`Éxito: ${cache.data.length} propiedades.`);
+        console.log(`Éxito total: ${cache.data.length} propiedades cargadas.`);
     } catch (error) {
-        console.error('Error en cache:', error.message);
-        if (!cache.data) cache.data = []; // Asegurar que siempre sea array
+        console.error('Error detallado:', error.message);
+        if (!cache.data) cache.data = [];
     }
 }
 
 app.get('/api/properties', async (req, res) => {
     if (cache.data.length === 0) await updateCache();
-    
     const filtros = {
         provincias: [...new Set(cache.data.map(p => p.provincia))].filter(Boolean).sort(),
         ciudades: [...new Set(cache.data.map(p => p.ciudad))].filter(Boolean).sort(),
         costas: [...new Set(cache.data.map(p => p.costa))].filter(Boolean).sort(),
         tipos: [...new Set(cache.data.map(p => p.type))].filter(Boolean).sort(),
     };
-
-    res.json({
-        total: cache.data.length,
-        lastUpdated: cache.lastUpdated,
-        filtrosDisponibles: filtros,
-        properties: cache.data
-    });
+    res.json({ total: cache.data.length, lastUpdated: cache.lastUpdated, filtrosDisponibles: filtros, properties: cache.data });
 });
 
 app.get('/api/properties/:ref', (req, res) => {
@@ -136,7 +132,7 @@ app.get('/health', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Puerto ${PORT}`);
+    console.log(`Servidor Live en puerto ${PORT}`);
     updateCache();
 });
 
