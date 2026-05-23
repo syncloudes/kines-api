@@ -10,7 +10,19 @@ const XML_URL = 'https://xml.redsp.net/files/1094/93025amh27n/kines-home-redsp_v
 
 app.use(compression());
 app.use(cors());
+// ── API KEY PROTECTION ──────────────────────────────────────
+const API_KEY = process.env.API_KEY;
 
+function requireApiKey(req, res, next) {
+  const key = req.headers['x-api-key'];
+  if (!key || key !== API_KEY) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  next();
+}
+
+// Aplicar solo a rutas de propiedades
+app.use('/api', requireApiKey);
 let cache = {
     data: [],
     lastUpdated: null,
